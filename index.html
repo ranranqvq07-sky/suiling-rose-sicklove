@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0002" />
+<title>3D 祟灵· 病恋</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; }
+
+  #phone {
+    position: relative; width: 100%; height: 100%; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #1a0004 0%, #0a0002 60%, #000000 100%);
+  }
+
+  @media (min-width: 560px) and (min-height: 640px) {
+    body { display: flex; align-items: center; justify-content: center; background: #050505; }
+    #phone {
+      width: auto; height: min(880px, calc(100dvh - 48px)); aspect-ratio: 9 / 16;
+      border-radius: 40px; box-shadow: 0 0 0 11px #0a0a0a, 0 30px 80px -20px rgba(0,0,0,0.9);
+    }
+  }
+
+  #stage { position: absolute; inset: 0; }
+  #stage canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; }
+
+  /* ======== 开屏加载动画 ======== */
+  #loader {
+    position: absolute; inset: 0; z-index: 99;
+    background: radial-gradient(circle at 50% 40%, #1a0004 0%, #0a0002 60%, #000000 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 1.5s ease-in-out, visibility 1.5s ease-in-out;
+  }
+  #loader.hide { opacity: 0; visibility: hidden; }
+  .heart-wrapper { position: relative; display: flex; justify-content: center; align-items: center; width: 120px; height: 120px; }
+  
+  .cross-halo {
+    position: absolute; width: 100px; height: 100px; border: 1px dashed rgba(255,0,50,0.5);
+    border-radius: 50%; animation: rotateGlow 10s linear infinite; color: #ff0033;
+  }
+  .cross-halo::before { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; }
+  .cross-halo::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; }
+
+  .heart-loader {
+    width: 40px; height: 40px; background: #ff0033; position: relative; transform: rotate(45deg);
+    animation: heartbeat 1.2s infinite ease-in-out; box-shadow: 0 0 30px rgba(255,0,50,0.6);
+    transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .heart-loader::before, .heart-loader::after { content: ''; position: absolute; width: 40px; height: 40px; background: #ff0033; border-radius: 50%; }
+  .heart-loader::before { top: -20px; left: 0; } .heart-loader::after { top: 0; left: -20px; }
+  
+  @keyframes heartbeat {
+    0%, 100% { transform: rotate(45deg) scale(1); box-shadow: 0 0 20px rgba(255,0,50,0.4); }
+    15% { transform: rotate(45deg) scale(1.15); box-shadow: 0 0 40px rgba(255,0,50,0.8); }
+    30% { transform: rotate(45deg) scale(1); box-shadow: 0 0 20px rgba(255,0,50,0.4); }
+    45% { transform: rotate(45deg) scale(1.15); box-shadow: 0 0 40px rgba(255,0,50,0.8); }
+    60% { transform: rotate(45deg) scale(1); }
+  }
+  .loader-text { margin-top: 40px; color: #ff0033; font-size: 12px; font-family: 'Space Mono', monospace; letter-spacing: 4px; text-transform: uppercase; transition: opacity 0.5s ease; }
+  #loader.finish .heart-loader { animation: finishHeart 1s forwards; }
+  #loader.finish .loader-text { opacity: 0; }
+  #loader.finish .cross-halo { opacity: 0; transition: opacity 0.5s; }
+  @keyframes finishHeart { 0% { transform: rotate(45deg) scale(1); } 50% { transform: rotate(45deg) scale(1.8); box-shadow: 0 0 80px #ff0033; } 100% { transform: rotate(45deg) scale(2.5); opacity: 0; } }
+
+  /* ======== 左下角音乐播放器 ======== */
+  #music-player {
+    position: absolute; bottom: 100px; left: 20px; width: 44px; height: 44px;
+    z-index: 500; cursor: pointer; border-radius: 50%; background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255,0,50,0.3); box-shadow: 0 0 15px rgba(255,0,50,0.1), inset 0 0 10px rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center; transition: all 0.3s;
+  }
+  #music-player:hover { border-color: #ff0033; box-shadow: 0 0 20px rgba(255,0,50,0.4); }
+  .vinyl-disc {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: repeating-radial-gradient(circle, #111, #111 2px, #000 3px, #000 4px);
+    display: flex; align-items: center; justify-content: center; transition: transform 0.3s;
+  }
+  #music-player.playing .vinyl-disc { animation: spinDisc 4s linear infinite; }
+  @keyframes spinDisc { 100% { transform: rotate(360deg); } }
+  .vinyl-center { width: 12px; height: 12px; border-radius: 50%; background: #ff0033; box-shadow: 0 0 8px #ff0033; }
+  #music-player::after {
+    content: ''; position: absolute; inset: -5px; border-radius: 50%;
+    border: 1px solid rgba(255,0,50,0.2); opacity: 0; transition: opacity 0.3s;
+  }
+  #music-player.playing::after { opacity: 1; animation: pulseRing 1.5s infinite; }
+  @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.3); opacity: 0; } }
+
+  /* ======== 通用提示 ======== */
+  .hint {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    pointer-events: none; z-index: 10; transition: opacity 0.6s ease;
+  }
+  .hint.hide { opacity: 0; }
+  .hint-ring {
+    width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.2);
+    position: relative; background: rgba(255,255,255,0.03); backdrop-filter: blur(2px); animation: pulse 2s infinite;
+  }
+  .hint-ring::before, .hint-ring::after { content: ''; position: absolute; top: 50%; width: 10px; height: 10px; border-top: 2px solid #fff; border-right: 2px solid #fff; opacity: 0.6; }
+  .hint-ring::before { left: 12px; transform: translateY(-50%) rotate(-135deg); }
+  .hint-ring::after { right: 12px; transform: translateY(-50%) rotate(45deg); }
+  .hint-text { font-size: 14px; letter-spacing: 0.2em; color: rgba(255,255,255,0.6); text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+  @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+
+  /* ======== 3D 交互热点 ======== */
+  #hotspot {
+    position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,0,50,0.8) 0%, rgba(255,0,50,0) 70%);
+    border: 1px solid rgba(255,50,100,0.6); box-shadow: 0 0 20px rgba(255,0,50,0.6), inset 0 0 10px rgba(255,255,255,0.5);
+    cursor: pointer; z-index: 15; opacity: 0; pointer-events: none; transition: opacity 0.5s ease, transform 0.2s ease;
+    display: flex; align-items: center; justify-content: center; animation: hotspotPulse 2s infinite;
+  }
+  #hotspot.visible { opacity: 1; pointer-events: auto; }
+  #hotspot:active { transform: scale(0.8); }
+  #hotspot::after { content: none; }
+  @keyframes hotspotPulse { 0%, 100% { box-shadow: 0 0 15px rgba(255,0,50,0.5); } 50% { box-shadow: 0 0 30px rgba(255,0,50,1); } }
+
+  /* ======== 病态文学文案 ======== */
+  #main-text {
+    position: absolute; top: 18%; left: 50%; transform: translate(-50%, -20px);
+    color: #ffcdd2; z-index: 20; opacity: 0; pointer-events: none;
+    transition: all 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+    font-family: 'Noto Serif SC', serif;
+    text-shadow: 0 4px 15px rgba(255,0,50,0.6), 0 0 40px rgba(255,0,0,0.2);
+    width: 100%; padding: 0 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  #main-text.show { opacity: 1; transform: translate(-50%, 0); }
+  .line-1 { font-size: 14px; letter-spacing: 3px; color: rgba(255,255,255,0.5); text-align: left; margin-left: 10%; font-weight: 300; }
+  .line-2 { font-size: 22px; letter-spacing: 6px; color: #ff0033; text-align: center; font-weight: 700; text-shadow: 0 0 20px rgba(255,0,50,0.8), 0 0 50px rgba(255,0,0,0.5); }
+  .line-3 { font-size: 15px; letter-spacing: 2px; color: #ffcdd2; text-align: right; margin-right: 10%; font-style: italic; font-weight: 400; }
+
+  /* ======== 底部新交互按键 ======== */
+  #reveal-btn {
+    position: absolute; bottom: 8%; left: 50%; transform: translate(-50%, 20px);
+    padding: 12px 36px; border-radius: 4px;
+    background: rgba(255, 0, 50, 0.1); border: 1px solid rgba(255, 0, 50, 0.5);
+    color: #ff0033; font-size: 13px; font-family: 'Space Mono', monospace; letter-spacing: 2px; cursor: pointer;
+    z-index: 20; opacity: 0; pointer-events: none;
+    transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(4px); box-shadow: 0 0 20px rgba(255,0,50,0.2);
+  }
+  #reveal-btn.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  #reveal-btn:active { transform: translate(-50%, 0) scale(0.95); background: rgba(255, 0, 50, 0.3); }
+
+  /* ======== 全屏资料页 ======== */
+  #profile-page {
+    position: absolute; inset: 0; z-index: 1000;
+    background: #050102; 
+    transform: translateY(100%); transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    display: flex; flex-direction: column; align-items: center;
+    overflow: hidden;
+  }
+  #profile-page.show { transform: translateY(0); }
+
+  .bg-glow {
+    position: fixed; top: 50%; left: 50%; width: 200vw; height: 200vw;
+    background: radial-gradient(circle, rgba(255, 0, 40, 0.08) 0%, transparent 50%);
+    transform: translate(-50%, -50%);
+    animation: rotateGlow 30s linear infinite; pointer-events: none; z-index: 0;
+  }
+  @keyframes rotateGlow { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+  
+  .scanline {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(255,0,50,0.03) 50%, rgba(255,0,50,0.03));
+    background-size: 100% 4px; animation: scan 10s linear infinite;
+  }
+  @keyframes scan { 0% { background-position: 0 0; } 100% { background-position: 0 100vh; } }
+
+  /* 背景飘落十字架 (纯CSS) */
+  .falling-cross {
+    position: fixed; pointer-events: none; z-index: 1; color: rgba(255,0,50,0.15);
+    animation: fall linear infinite; width: 16px; height: 16px;
+  }
+  .falling-cross::before, .falling-cross::after { content: ''; position: absolute; background: currentColor; }
+  .falling-cross::before { top: 0; left: 50%; width: 2px; height: 100%; transform: translateX(-50%); }
+  .falling-cross::after { top: 35%; left: 0; width: 100%; height: 2px; transform: translateY(-50%); }
+
+  @keyframes fall {
+    0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+  }
+
+  .close-btn {
+    position: fixed; top: 24px; right: 24px; width: 36px; height: 36px; border-radius: 4px;
+    background: transparent; border: none; color: rgba(255,255,255,0.4);
+    font-size: 24px; font-family: 'Space Mono', monospace; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 1005; transition: all 0.3s;
+  }
+  .close-btn:hover { color: #ff0033; }
+
+  .pages-wrapper { width: 100%; height: 100%; position: relative; z-index: 2; overflow: hidden; }
+  .pages-track {
+    display: flex; width: 500%; height: 100%; 
+    transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+
+  .page-content {
+    width: 20%; height: 100%; flex-shrink: 0;
+    padding: 40px 24px 120px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .page-content::-webkit-scrollbar { display: none; }
+
+  .fade-in {
+    opacity: 0; transform: translateY(15px);
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+  #profile-page.show .fade-in { opacity: 1; transform: translateY(0); }
+  #profile-page.show .fade-in:nth-child(1) { transition-delay: 0.1s; }
+  #profile-page.show .fade-in:nth-child(2) { transition-delay: 0.2s; }
+  #profile-page.show .fade-in:nth-child(3) { transition-delay: 0.3s; }
+  #profile-page.show .fade-in:nth-child(4) { transition-delay: 0.4s; }
+  #profile-page.show .fade-in:nth-child(5) { transition-delay: 0.5s; }
+
+  .sys-header {
+    display: flex; justify-content: space-between;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: rgba(255,0,50,0.6); border-bottom: 1px solid rgba(255,0,50,0.2); padding-bottom: 8px;
+    padding-right: 30px;
+  }
+
+  .id-section { position: relative; padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+  .id-bg-text {
+    position: absolute; top: -20px; left: -10px; font-size: 100px; font-weight: 700; font-family: 'Space Mono', monospace;
+    color: rgba(255,0,50,0.03); pointer-events: none; z-index: -1; white-space: nowrap;
+  }
+  .id-name { font-family: 'Noto Serif SC', serif; font-size: 38px; color: #fff; letter-spacing: 4px; text-shadow: 0 0 20px rgba(255,0,50,0.5); }
+  .id-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; font-family: 'Space Mono', monospace; }
+  .id-tag {
+    font-size: 11px; padding: 3px 8px; color: #ffcdd2;
+    border-left: 2px solid #ff0033; background: rgba(255,0,50,0.1);
+  }
+
+  .clinical-row {
+    display: flex; flex-direction: column; gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px;
+  }
+  .clinical-title {
+    font-family: 'Space Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .clinical-title::before {
+    content: ''; display: inline-block; width: 10px; height: 10px; position: relative; color: #ff0033;
+  }
+  .clinical-title::before { border-left: 1.5px solid #ff0033; border-top: 1.5px solid #ff0033; transform: rotate(45deg); width: 6px; height: 6px; margin-right: 2px; }
+
+  .clinical-content { font-size: 15px; color: #e0e0e0; letter-spacing: 1px; line-height: 1.6; }
+  .clinical-content.highlight { color: #ff0033; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px rgba(255,0,50,0.4); font-family: 'Noto Serif SC', serif; }
+
+  .style-grid { display: flex; flex-direction: column; gap: 12px; }
+  .style-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; color: #ccc; font-family: 'Space Mono', monospace;
+  }
+  .style-item::before { content: '+'; color: #ff0033; font-size: 14px; font-weight: bold; }
+
+  .info-matrix { display: flex; flex-direction: column; gap: 10px; }
+  .info-line { display: flex; justify-content: space-between; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+  .info-line span:first-child { color: rgba(255,255,255,0.5); font-family: 'Space Mono', monospace; font-size: 12px; }
+  .info-line span:last-child { color: #fff; }
+
+  .price-box {
+    margin-top: 10px; border: 1px solid rgba(255,0,50,0.4); background: rgba(255,0,50,0.05);
+    padding: 20px; position: relative; overflow: hidden;
+  }
+  .price-box::before {
+    content: '+'; position: absolute; top: -30px; right: -10px; font-size: 100px;
+    font-family: monospace; font-weight: 300; color: rgba(255,0,50,0.05);
+    transform: rotate(45deg);
+  }
+  .price-label { font-family: 'Space Mono', monospace; font-size: 11px; color: #ff0033; letter-spacing: 2px; margin-bottom: 8px; }
+  .price-val { font-family: 'Space Mono', monospace; font-size: 28px; color: #fff; font-weight: bold; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
+
+  .protocol-list { display: flex; flex-direction: column; gap: 20px; }
+  .protocol-item {
+    position: relative; padding-left: 30px; font-size: 14px; color: #d1d1d1; line-height: 1.6; font-family: 'Space Mono', 'Noto Serif SC', monospace;
+  }
+  .protocol-num { position: absolute; left: 0; top: 2px; font-size: 14px; color: rgba(255,0,50,0.8); font-weight: bold; font-family: monospace; }
+  .protocol-item .warn { color: #ff0033; font-weight: bold; }
+
+  .archive-grid {
+    display: flex; flex-direction: column; gap: 16px; margin-top: 10px;
+  }
+  .archive-btn {
+    position: relative; overflow: hidden;
+    border: 1px solid rgba(255,0,50,0.3);
+    background: rgba(255,0,50,0.03);
+    padding: 24px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; transition: all 0.3s;
+    box-shadow: inset 0 0 20px rgba(255,0,50,0.05);
+  }
+  .archive-btn::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    background: #ff0033; transition: height 0.3s;
+  }
+  .archive-btn:active { transform: scale(0.98); background: rgba(255,0,50,0.1); }
+  .archive-btn:hover::before { height: 100%; }
+  
+  .archive-info { display: flex; flex-direction: column; gap: 6px; }
+  .archive-title { font-family: 'Space Mono', monospace; font-size: 18px; color: #fff; letter-spacing: 2px; }
+  .archive-sub { font-size: 12px; color: rgba(255,255,255,0.4); font-family: 'Noto Serif SC', serif; }
+  .archive-icon { font-size: 24px; color: #ff0033; opacity: 0.5; font-family: 'Space Mono', monospace; }
+
+  /* ======== 第四页：系统监测 (动画页) ======== */
+  .monitor-page {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    height: 100%; position: relative;
+  }
+  .glitch-title {
+    font-family: 'Space Mono', monospace; font-size: 24px; font-weight: bold; letter-spacing: 4px;
+    color: #fff; position: relative; margin-bottom: 30px;
+    text-shadow: 0.05em 0 0 rgba(255,0,0,0.75), -0.025em -0.05em 0 rgba(0,0,255,0.75),
+                 0.025em 0.05em 0 rgba(0,255,0,0.75);
+    animation: glitch 500ms infinite;
+  }
+  @keyframes glitch {
+    0% { text-shadow: 0.05em 0 0 rgba(255,0,0,0.75), -0.05em -0.025em 0 rgba(0,0,255,0.75), -0.025em 0.05em 0 rgba(0,255,0,0.75); }
+    14% { text-shadow: 0.05em 0 0 rgba(255,0,0,0.75), -0.05em -0.025em 0 rgba(0,0,255,0.75), -0.025em 0.05em 0 rgba(0,255,0,0.75); }
+    15% { text-shadow: -0.05em -0.025em 0 rgba(255,0,0,0.75), 0.025em 0.025em 0 rgba(0,0,255,0.75), -0.05em -0.05em 0 rgba(0,255,0,0.75); }
+    49% { text-shadow: -0.05em -0.025em 0 rgba(255,0,0,0.75), 0.025em 0.025em 0 rgba(0,0,255,0.75), -0.05em -0.05em 0 rgba(0,255,0,0.75); }
+    50% { text-shadow: 0.025em 0.05em 0 rgba(255,0,0,0.75), 0.05em 0 0 rgba(0,0,255,0.75), 0 -0.05em 0 rgba(0,255,0,0.75); }
+    99% { text-shadow: 0.025em 0.05em 0 rgba(255,0,0,0.75), 0.05em 0 0 rgba(0,0,255,0.75), 0 -0.05em 0 rgba(0,255,0,0.75); }
+    100% { text-shadow: -0.025em 0 0 rgba(255,0,0,0.75), -0.025em -0.025em 0 rgba(0,0,255,0.75), -0.025em -0.05em 0 rgba(0,255,0,0.75); }
+  }
+
+  .ecg-container {
+    width: 100%; height: 120px; margin: 20px 0;
+    background: rgba(255,0,50,0.02); border-top: 1px solid rgba(255,0,50,0.2); border-bottom: 1px solid rgba(255,0,50,0.2);
+    overflow: hidden; position: relative;
+  }
+  .ecg-svg {
+    width: 200%; height: 100%;
+    animation: ecgMove 3s linear infinite;
+  }
+  @keyframes ecgMove { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+  .ecg-line {
+    fill: none; stroke: #ff0033; stroke-width: 2;
+    filter: drop-shadow(0 0 8px #ff0033);
+  }
+
+  .monitor-stats {
+    display: flex; gap: 20px; width: 100%; margin-top: 20px;
+  }
+  .stat-box {
+    flex: 1; border: 1px solid rgba(255,255,255,0.1); padding: 15px; text-align: center;
+    background: rgba(0,0,0,0.5); position: relative;
+  }
+  .stat-box::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: #ff0033; }
+  .stat-label { font-family: 'Space Mono', monospace; font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 2px; }
+  .stat-val { font-family: 'Space Mono', monospace; font-size: 24px; color: #ff0033; font-weight: bold; text-shadow: 0 0 10px rgba(255,0,50,0.5); margin-top: 5px; }
+
+  /* ======== 第五页：终端休眠 ======== */
+  .ending-page {
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    height: 100%; font-family: 'Space Mono', monospace; color: #ff0033; position: relative;
+    padding-bottom: 100px;
+  }
+  .terminal-text {
+    font-size: 14px; letter-spacing: 2px; margin-bottom: 15px; text-align: left; width: 100%;
+  }
+  .terminal-text span { color: #fff; }
+  .cursor {
+    display: inline-block; width: 8px; height: 16px; background: #ff0033;
+    animation: blink 1s step-end infinite; margin-left: 5px; vertical-align: middle;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* 分页底部切换按钮 */
+  .page-nav-btn {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: 80%; max-width: 320px; padding: 14px 0;
+    background: #000; border: 1px solid rgba(255,0,50,0.5);
+    color: #ff0033; font-family: 'Space Mono', monospace; font-size: 12px; font-weight: bold; letter-spacing: 2px;
+    cursor: pointer; z-index: 10; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+  }
+  .page-nav-btn:active { transform: translateX(-50%) scale(0.96); background: rgba(255,0,50,0.1); }
+
+  /* ======== 图片/暂无 弹窗 ======== */
+  #image-modal {
+    position: absolute; inset: 0; z-index: 3000;
+    background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(10px);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  #image-modal.show { opacity: 1; pointer-events: auto; }
+  
+  .modal-close {
+    position: absolute; top: 20px; right: 20px; width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: #fff;
+    font-size: 24px; display: flex; justify-content: center; align-items: center;
+    cursor: pointer; z-index: 3100; backdrop-filter: blur(4px);
+  }
+  
+  .modal-header {
+    position: absolute; top: 30px; left: 0; width: 100%; text-align: center;
+    font-family: 'Space Mono', monospace; font-size: 14px; color: #ff0033; letter-spacing: 4px;
+    pointer-events: none;
+  }
+
+  #modal-img {
+    max-width: 90%; max-height: 70%; object-fit: contain;
+    border: 1px solid rgba(255,0,50,0.3); box-shadow: 0 0 40px rgba(255,0,50,0.1);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: scale(0.9); display: none;
+  }
+  #image-modal.show #modal-img { transform: scale(1); }
+
+  #modal-empty {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; color: rgba(255, 0, 50, 0.4); font-family: 'Space Mono', monospace;
+  }
+  #modal-empty .icon {
+    font-size: 60px; border: 2px dashed rgba(255,0,50,0.3); width: 100px; height: 100px;
+    display: flex; justify-content: center; align-items: center; border-radius: 50%;
+  }
+  #modal-empty .text { font-size: 14px; letter-spacing: 4px; }
+
+  /* 右下角“查看更多”按钮 */
+  #modal-more-btn {
+    position: absolute;
+    bottom: 40px;
+    right: 40px;
+    padding: 10px 24px;
+    background: rgba(255, 0, 50, 0.1);
+    border: 1px solid rgba(255, 0, 50, 0.5);
+    color: #ff0033;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.3s;
+    display: none;
+    z-index: 3100;
+    box-shadow: 0 0 15px rgba(255,0,50,0.1);
+  }
+  #modal-more-btn:hover {
+    background: rgba(255, 0, 50, 0.3);
+    color: #fff;
+    box-shadow: 0 0 25px rgba(255, 0, 50, 0.6);
+  }
+  #modal-more-btn.show {
+    display: block;
+  }
+</style>
+</head>
+<body>
+  <div id="phone">
+    <div id="stage"></div>
+
+    <!-- 左下角音乐播放器 -->
+    <audio id="bgm-audio" src="./bgm.mp3" loop></audio>
+    <div id="music-player">
+      <div class="vinyl-disc">
+        <div class="vinyl-center"></div>
+      </div>
+    </div>
+
+    <!-- 开屏加载动画 -->
+    <div id="loader">
+      <div class="heart-wrapper">
+        <div class="cross-halo"></div>
+        <div class="heart-loader"></div>
+      </div>
+      <div class="loader-text" id="loader-text">0%</div>
+    </div>
+    
+    <!-- 3D 交互热点 -->
+    <div id="hotspot"></div>
+
+    <!-- 滑动提示 -->
+    <div class="hint" id="hint">
+      <div class="hint-ring"></div>
+      <div class="hint-text">滑动观察</div>
+    </div>
+
+    <!-- 病态文学文案 -->
+    <div id="main-text">
+      <div class="line-1">理智正在崩坏，而你是唯一的病灶。</div>
+      <div class="line-2">剥开虚伪的皮囊</div>
+      <div class="line-3">请将我像劣犬一样驯服。</div>
+    </div>
+
+    <!-- 底部新交互按键 -->
+    <div id="reveal-btn">ACCESS FILE // 解锁档案</div>
+
+    <!-- 全屏资料页 -->
+    <div id="profile-page">
+      <div class="bg-glow"></div>
+      <div class="scanline"></div>
+      <button class="close-btn" id="close-btn">×</button>
+      
+      <div class="pages-wrapper">
+        <div class="pages-track" id="pages-track">
+          
+          <!-- PAGE 1: 临床档案 -->
+          <div class="page-content">
+            <div class="sys-header fade-in">
+              <span>PSYCHIATRIC RECORD</span>
+              <span>ID: 017</span>
+            </div>
+
+            <div class="id-section fade-in">
+              <div class="id-bg-text">SICKNESS</div>
+              <div class="id-name">祟灵</div>
+              <div class="id-tags">
+                <span class="id-tag">AGE_17</span>
+                <span class="id-tag">FEMALE</span>
+                <span class="id-tag">ENTP</span>
+                <span class="id-tag">SAN_WU</span>
+              </div>
+            </div>
+
+            <div class="clinical-row fade-in">
+              <div class="clinical-title">PRIMARY PATHOLOGY / 主接</div>
+              <div class="clinical-content highlight">病</div>
+            </div>
+
+            <div class="clinical-row fade-in">
+              <div class="clinical-title">PRIMARY STYLE / 主风格</div>
+              <div class="style-grid">
+                <div class="style-item">低无 / 逻辑 / 诡辩</div>
+              </div>
+            </div>
+
+            <div class="clinical-row fade-in">
+              <div class="clinical-title">SECONDARY STYLE / 副风格</div>
+              <div class="style-grid">
+                <div class="style-item">高恋 / 疯病 / 血暴</div>
+                <div class="style-item">伪高 / 下位 / 小狗文学</div>
+                <div class="style-item">低无 / 剖析 / 黑骑士</div>
+                <div class="style-item">温高 / 微文 / 平权</div>
+              </div>
+            </div>
+
+            <div class="clinical-row fade-in">
+              <div class="clinical-title">STATUS / 基本信息</div>
+              <div class="info-matrix">
+                <div class="info-line"><span>常驻团</span><span>暂无</span></div>
+                <div class="info-line"><span>常驻建模</span><span>虚荣 / 初始</span></div>
+              </div>
+            </div>
+
+            <div class="price-box fade-in">
+              <div class="price-label">PRICE PROTOCOL</div>
+              <div class="price-val">15/0.5 &nbsp;|&nbsp; 30/h</div>
+            </div>
+          </div>
+
+          <!-- PAGE 2: 须知协议 -->
+          <div class="page-content">
+            <div class="sys-header fade-in">
+              <span>TERMS & PROTOCOL</span>
+              <span>WARNING</span>
+            </div>
+
+            <div class="id-section fade-in" style="border-bottom: none; padding-bottom: 0;">
+              <div class="id-name" style="font-size: 28px;">接单须知</div>
+            </div>
+
+            <div class="protocol-list fade-in">
+              <div class="protocol-item">
+                <span class="protocol-num">01</span>
+                如单内不默认恋人，请提前告知。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">02</span>
+                未经说明踩雷概不负责，请向我提前说明。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">03</span>
+                <span class="warn">本人风格不稳固</span>，发现自己跑偏且板位回复欲低迷会主动退单。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">04</span>
+                拒男板，下单默认送单。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">05</span>
+                单口不提前说明，时间减半。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">06</span>
+                拼刺刀 / 互病 / 修罗场，望提前说明。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">07</span>
+                拒 辱骂贬低 / 看乐子 / 抽象 / 黄黑脸。请尊重我。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">08</span>
+                单内禁直播、录屏。自留截屏请提前说明，禁传播。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">09</span>
+                如在单内感到不适，请说安全词 <span class="warn">“我不舒服”</span>，我会停止或调整节奏。
+              </div>
+              <div class="protocol-item">
+                <span class="protocol-num">10</span>
+                风格为随机掉落不接受指定，请斟酌后选择我。
+              </div>
+            </div>
+
+            <div class="clinical-row fade-in" style="margin-top: 10px;">
+              <div class="clinical-title">REFUND POLICY / 退单规则</div>
+              <div class="protocol-list" style="gap: 12px;">
+                <div class="protocol-item">
+                  <span class="protocol-num">A</span>
+                  0.5h 在 10min 内支持全额退单；1h 为 15min 内。
+                </div>
+                <div class="protocol-item">
+                  <span class="protocol-num">B</span>
+                  超过以上时间，按已陪时间百分比退。
+                </div>
+                <div class="protocol-item">
+                  <span class="protocol-num">C</span>
+                  单子最后 10min 则全额不退，提出默认送单。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAGE 3: 专属数据 (点击弹窗) -->
+          <div class="page-content">
+            <div class="sys-header fade-in">
+              <span>DATA ARCHIVE</span>
+              <span>SECRET</span>
+            </div>
+
+            <div class="id-section fade-in" style="border-bottom: none; padding-bottom: 0;">
+              <div class="id-name" style="font-size: 28px;">档案拓展</div>
+            </div>
+
+            <div class="archive-grid fade-in">
+              <!-- 板评：传了一张图，并附带了跳转链接 -->
+              <div class="archive-btn" onclick="openImageModal('./review.jpg', 'BOARD REVIEW / 板评存档', 'https://www.kdocs.cn/l/ccpQ9Me0IyeW')">
+                <div class="archive-info">
+                  <div class="archive-title">板评</div>
+                  <div class="archive-sub">点击查阅反馈截图</div>
+                </div>
+                <div class="archive-icon">+</div>
+              </div>
+
+              <!-- 话术：空图片，带跳转链接 -->
+              <div class="archive-btn" onclick="openImageModal('', 'DIALOGUE / 话术记录', 'https://www.kdocs.cn/l/ccdaDf7j10ZT')">
+                <div class="archive-info">
+                  <div class="archive-title">话术</div>
+                  <div class="archive-sub">暂无记录</div>
+                </div>
+                <div class="archive-icon">+</div>
+              </div>
+
+              <!-- 卡类：空图片，带跳转链接 -->
+              <div class="archive-btn" onclick="openImageModal('', 'MEDIA / 卡类展示', 'https://www.kdocs.cn/l/cbwvOuoSyDfs')">
+                <div class="archive-info">
+                  <div class="archive-title">卡类</div>
+                  <div class="archive-sub">暂无记录</div>
+                </div>
+                <div class="archive-icon">+</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAGE 4: 系统监测 (动画页) -->
+          <div class="page-content monitor-page">
+            <div class="sys-header fade-in" style="position: absolute; top: 40px; left: 24px; right: 24px;">
+              <span>SYSTEM STATE</span>
+              <span style="color: #ff0033;">UNSTABLE</span>
+            </div>
+
+            <div class="glitch-title fade-in">SYSTEM ERROR</div>
+
+            <div class="ecg-container fade-in">
+              <svg class="ecg-svg" viewBox="0 0 1000 100" preserveAspectRatio="none">
+                <path class="ecg-line" d="
+                  M 0,50 L 100,50 
+                  L 120,50 L 130,20 L 140,80 L 150,50 
+                  L 200,50 L 210,45 L 220,55 L 230,50 
+                  L 300,50 L 320,10 L 330,90 L 340,50 
+                  L 400,50 L 420,30 L 440,70 L 460,50 
+                  L 500,50 L 500,50 L 600,50 
+                  L 620,50 L 630,20 L 640,80 L 650,50 
+                  L 700,50 L 710,45 L 720,55 L 730,50 
+                  L 800,50 L 820,10 L 830,90 L 840,50 
+                  L 900,50 L 920,30 L 940,70 L 960,50 
+                  L 1000,50
+                " />
+              </svg>
+            </div>
+
+            <div class="monitor-stats fade-in">
+              <div class="stat-box">
+                <div class="stat-label">BPM / 心率</div>
+                <div class="stat-val" id="val-bpm">128</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">SANITY / 理智</div>
+                <div class="stat-val" id="val-sanity">14%</div>
+              </div>
+            </div>
+
+            <div class="protocol-list fade-in" style="margin-top: 20px;">
+              <div class="protocol-item">
+                <span class="protocol-num">+</span>
+                <span class="warn">核心数据已读取完毕。</span>所有病理特征已成功映射。
+              </div>
+            </div>
+          </div>
+
+          <!-- PAGE 5: 终端休眠 -->
+          <div class="page-content ending-page">
+            <div style="width: 100%; text-align: left; padding-left: 10%;">
+              <div class="terminal-text fade-in" style="animation-delay: 0.2s;">> 解析完毕。</div>
+              <div class="terminal-text fade-in" style="animation-delay: 0.8s;">> 宿主特征已完全收录。</div>
+              <div class="terminal-text fade-in" style="animation-delay: 1.4s; color: rgba(255,255,255,0.4);">
+                > 等待下一次唤醒...
+              </div>
+              <div class="terminal-text fade-in" style="animation-delay: 2s; margin-top: 40px; font-size: 18px; font-weight: bold;">
+                SYSTEM SLEEP<span class="cursor"></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 切换按钮 -->
+      <button class="page-nav-btn" id="nav-btn">
+        <span id="nav-text">NEXT // 查看须知</span>
+        <span id="nav-icon" style="font-family: monospace; font-size: 16px;">→</span>
+      </button>
+    </div>
+
+    <!-- 图片/暂无 弹窗 -->
+    <div id="image-modal">
+      <div class="modal-header" id="modal-header">VIEW IMAGE</div>
+      <button class="modal-close" onclick="closeImageModal()">×</button>
+      
+      <img id="modal-img" src="" alt="档案截图" />
+      
+      <div id="modal-empty">
+        <div class="icon" style="font-family: monospace; font-weight: 300;">+</div>
+        <div class="text">NO DATA / 暂无数据</div>
+      </div>
+
+      <!-- 右下角跳转按钮 -->
+      <a id="modal-more-btn" href="#" target="_blank">查看更多 &rarr;</a>
+    </div>
+
+  </div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/DRACOLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+/* ============================================================
+   1. 基础环境 & 渲染器
+   ============================================================ */
+const container = document.getElementById('stage');
+const hintEl = document.getElementById('hint');
+const hotspotEl = document.getElementById('hotspot');
+const loaderEl = document.getElementById('loader');
+const loaderText = document.getElementById('loader-text');
+const mainTextEl = document.getElementById('main-text');
+const revealBtnEl = document.getElementById('reveal-btn');
+const profilePageEl = document.getElementById('profile-page');
+const closeBtnEl = document.getElementById('close-btn');
+
+// 音乐播放器控制
+const musicPlayerEl = document.getElementById('music-player');
+const bgmAudio = document.getElementById('bgm-audio');
+let isMusicPlaying = false;
+
+musicPlayerEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (isMusicPlaying) {
+    bgmAudio.pause();
+    musicPlayerEl.classList.remove('playing');
+  } else {
+    bgmAudio.play().then(() => {
+      musicPlayerEl.classList.add('playing');
+    }).catch(err => {
+      console.log('播放失败，请确保有 bgm.mp3 文件且浏览器允许播放:', err);
+    });
+  }
+  isMusicPlaying = !isMusicPlaying;
+});
+
+
+// 分页控制
+const pagesTrack = document.getElementById('pages-track');
+const navBtn = document.getElementById('nav-btn');
+const navText = document.getElementById('nav-text');
+const navIcon = document.getElementById('nav-icon');
+const pageContents = document.querySelectorAll('.page-content');
+let currentPage = 1;
+
+navBtn.addEventListener('click', () => {
+  if (currentPage === 1) {
+    pagesTrack.style.transform = 'translateX(-20%)';
+    navText.innerText = 'NEXT // 档案拓展';
+    navIcon.innerText = '→';
+    currentPage = 2;
+    pageContents[1].scrollTop = 0;
+  } else if (currentPage === 2) {
+    pagesTrack.style.transform = 'translateX(-40%)';
+    navText.innerText = 'NEXT // 系统监测';
+    navIcon.innerText = '→';
+    currentPage = 3;
+    pageContents[2].scrollTop = 0;
+  } else if (currentPage === 3) {
+    pagesTrack.style.transform = 'translateX(-60%)';
+    navText.innerText = 'NEXT // 终端休眠';
+    navIcon.innerText = '→';
+    currentPage = 4;
+    pageContents[3].scrollTop = 0;
+  } else if (currentPage === 4) {
+    pagesTrack.style.transform = 'translateX(-80%)';
+    navText.innerText = 'RESET // 返回主档';
+    navIcon.innerText = '↺';
+    currentPage = 5;
+    pageContents[4].scrollTop = 0;
+  } else {
+    pagesTrack.style.transform = 'translateX(0)';
+    navText.innerText = 'NEXT // 查看须知';
+    navIcon.innerText = '→';
+    currentPage = 1;
+    pageContents[0].scrollTop = 0;
+  }
+});
+
+/* ======== 心电图数据乱跳特效 ======== */
+const bpmEl = document.getElementById('val-bpm');
+const sanityEl = document.getElementById('val-sanity');
+setInterval(() => {
+  bpmEl.innerText = Math.floor(Math.random() * 30) + 120;
+  sanityEl.innerText = Math.floor(Math.random() * 10) + 10 + '%';
+}, 400); 
+
+/* ======== 背景飘落十字架生成 ======== */
+function createFallingCrosses() {
+  const container = document.getElementById('profile-page');
+  for (let i = 0; i < 15; i++) {
+    const cross = document.createElement('div');
+    cross.className = 'falling-cross';
+    cross.style.left = Math.random() * 100 + 'vw';
+    cross.style.animationDuration = (Math.random() * 5 + 5) + 's';
+    cross.style.animationDelay = (Math.random() * 5) + 's';
+    cross.style.width = (Math.random() * 10 + 10) + 'px';
+    cross.style.height = cross.style.width;
+    container.appendChild(cross);
+  }
+}
+createFallingCrosses();
+
+/* ======== 弹窗控制逻辑 ======== */
+const imageModal = document.getElementById('image-modal');
+const modalImg = document.getElementById('modal-img');
+const modalEmpty = document.getElementById('modal-empty');
+const modalHeader = document.getElementById('modal-header');
+const modalMoreBtn = document.getElementById('modal-more-btn');
+
+window.openImageModal = function(imgSrc, title, url) {
+  modalHeader.innerText = title;
+  
+  if (!imgSrc) {
+    modalImg.style.display = 'none';
+    modalEmpty.style.display = 'flex';
+  } else {
+    modalImg.src = imgSrc;
+    modalImg.style.display = 'block';
+    modalEmpty.style.display = 'none';
+  }
+
+  // 动态设置跳转链接
+  if (url) {
+    modalMoreBtn.href = url;
+    modalMoreBtn.classList.add('show');
+  } else {
+    modalMoreBtn.classList.remove('show');
+  }
+
+  imageModal.classList.add('show');
+}
+
+window.closeImageModal = function() {
+  imageModal.classList.remove('show');
+}
+
+imageModal.addEventListener('click', (e) => {
+  if (e.target === imageModal) {
+    closeImageModal();
+  }
+});
+
+/* ============================================================
+   2. Three.js 场景初始化
+   ============================================================ */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearAlpha(0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1; 
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+camera.position.set(0, 2, 8);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.rotateSpeed = 0.8;
+controls.enablePan = false;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.5;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/* ============================================================
+   ✝️ 3D 场景：添加巨大的背景十字架
+   ============================================================ */
+const crossGroup = new THREE.Group();
+const crossMat = new THREE.MeshStandardMaterial({
+  color: 0x4a0008,
+  emissive: 0xff0033,
+  emissiveIntensity: 0.2,
+  roughness: 0.6,
+});
+
+const vertBar = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4, 0.2), crossMat);
+crossGroup.add(vertBar);
+const horizBar = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.2), crossMat);
+horizBar.position.y = 0.8; 
+crossGroup.add(horizBar);
+
+scene.add(crossGroup);
+
+/* 光影布置 */
+scene.add(new THREE.AmbientLight(0xffffff, 0.3)); 
+const keyLight = new THREE.DirectionalLight(0xfff2f2, 3.5); 
+keyLight.position.set(5, 8, 5);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.width = 2048;
+keyLight.shadow.mapSize.height = 2048;
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0x7788ff, 2.0);
+fillLight.position.set(-5, 3, 4);
+scene.add(fillLight);
+const rimLight = new THREE.DirectionalLight(0xff0033, 3.0);
+rimLight.position.set(0, 6, -8);
+scene.add(rimLight);
+
+/* 后期处理（泛光） */
+const renderScene = new RenderPass(scene, camera);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.6, 0.4, 0.85);
+const composer = new EffectComposer(renderer);
+composer.addPass(renderScene);
+composer.addPass(bloomPass);
+
+/* ============================================================
+   3. 平滑加载动画逻辑
+   ============================================================ */
+let realProgress = 0;
+let displayProgress = 0;
+let isModelLoaded = false;
+let finishTriggered = false;
+const loadStartTime = performance.now();
+const MIN_LOAD_TIME = 2500;
+
+function animateProgress() {
+  const now = performance.now();
+  const elapsed = now - loadStartTime;
+
+  if (!isModelLoaded || elapsed < MIN_LOAD_TIME) {
+    let target = isModelLoaded ? 100 : (realProgress > 0 ? realProgress : 50);
+    if (!isModelLoaded && elapsed < MIN_LOAD_TIME && target > 90) target = 90;
+
+    displayProgress += (target - displayProgress) * 0.05 + 0.1;
+    if (displayProgress > target) displayProgress = target;
+    
+    loaderText.innerText = `${Math.floor(displayProgress)}%`;
+    requestAnimationFrame(animateProgress);
+  } else {
+    displayProgress += 2;
+    if (displayProgress >= 100) {
+      displayProgress = 100;
+      loaderText.innerText = `100%`;
+      triggerFinish();
+    } else {
+      loaderText.innerText = `${Math.floor(displayProgress)}%`;
+      requestAnimationFrame(animateProgress);
+    }
+  }
+}
+animateProgress();
+
+function triggerFinish() {
+  if (finishTriggered) return;
+  finishTriggered = true;
+  
+  setTimeout(() => {
+    loaderEl.classList.add('finish'); 
+    setTimeout(() => {
+      loaderEl.classList.add('hide');
+      setTimeout(dismissHint, 4000); 
+    }, 600); 
+  }, 300);
+}
+
+/* ============================================================
+   4. 模型加载
+   ============================================================ */
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+
+let currentModel = null;
+let mixer = null; 
+const hotspotAnchor = new THREE.Vector3(); 
+let isInteracted = false; 
+
+let defaultCameraPos = new THREE.Vector3();
+let isResettingView = false;
+
+/* 🌹 加载你自己的模型路径 */
+gltfLoader.load(
+  './rose.glb', 
+  (gltf) => {
+    currentModel = gltf.scene;
+
+    // 备用材质：如果你的玫瑰模型没有贴图/纯白，会自动披上红丝绒材质
+    const fallbackMat = new THREE.MeshPhysicalMaterial({
+      color: 0x8a0015, roughness: 0.65, metalness: 0.1, 
+      clearcoat: 0.1, clearcoatRoughness: 0.5, sheen: 1.0, sheenColor: new THREE.Color(0xff2b4a),
+    });
+
+    currentModel.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (child.material) {
+          child.material.envMapIntensity = 1.5; 
+          if (child.material.isMeshStandardMaterial) {
+            child.material.roughness = Math.max(0.3, child.material.roughness * 0.8); 
+          }
+        } else {
+          child.material = fallbackMat;
+        }
+      }
+    });
+
+    scene.add(currentModel);
+
+    if (gltf.animations && gltf.animations.length > 0) {
+      mixer = new THREE.AnimationMixer(currentModel);
+      const action = mixer.clipAction(gltf.animations[0]);
+      action.play();
+    }
+
+    const box = new THREE.Box3().setFromObject(currentModel);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+
+    currentModel.position.sub(center);
+    currentModel.position.y += size.y * 0.05;
+    hotspotAnchor.set(0, size.y * 0.25, 0); 
+
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    let cameraDist = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.6; 
+    cameraDist = Math.max(cameraDist, 2.0);
+
+    defaultCameraPos.set(0, cameraDist * 0.2, cameraDist);
+
+    camera.position.copy(defaultCameraPos);
+    controls.target.set(0, 0, 0);
+    controls.minDistance = cameraDist * 0.4;
+    controls.maxDistance = cameraDist * 3.0;
+    controls.update();
+
+    isModelLoaded = true;
+  },
+  (xhr) => {
+    if (xhr.total > 0) realProgress = Math.round((xhr.loaded / xhr.total) * 100);
+  },
+  (error) => {
+    console.error('加载失败:', error);
+    loaderText.innerHTML = `❌ 找不到 rose.glb<br><span style="font-size:10px;color:#aaa;">请确保文件在同一目录，且通过本地服务器运行</span>`;
+  }
+);
+
+/* ============================================================
+   5. 核心交互逻辑
+   ============================================================ */
+let hintDismissed = false;
+let idleTimer = null;
+
+function dismissHint() {
+  if (hintDismissed) return;
+  hintDismissed = true;
+  hintEl.classList.add('hide');
+}
+
+controls.addEventListener('start', () => {
+  dismissHint();
+  controls.autoRotate = false;
+  clearTimeout(idleTimer);
+  if (!isInteracted) hotspotEl.classList.remove('visible'); 
+});
+
+controls.addEventListener('end', () => {
+  clearTimeout(idleTimer);
+  if (!isInteracted) {
+    setTimeout(() => { hotspotEl.classList.add('visible'); }, 500);
+  }
+  idleTimer = setTimeout(() => { 
+    if(!isInteracted) controls.autoRotate = true; 
+  }, 3000);
+});
+
+hotspotEl.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (isInteracted) return;
+  isInteracted = true;
+
+  hotspotEl.classList.remove('visible');
+  dismissHint();
+  controls.autoRotate = false;
+  
+  isResettingView = true;
+
+  setTimeout(() => {
+    mainTextEl.classList.add('show');
+  }, 400);
+
+  setTimeout(() => {
+    revealBtnEl.classList.add('show');
+  }, 1800);
+});
+
+revealBtnEl.addEventListener('click', () => {
+  profilePageEl.classList.add('show');
+});
+
+closeBtnEl.addEventListener('click', () => {
+  profilePageEl.classList.remove('show');
+  setTimeout(() => {
+    pagesTrack.style.transform = 'translateX(0)';
+    navText.innerText = 'NEXT // 查看须知';
+    navIcon.innerText = '→';
+    currentPage = 1;
+  }, 600);
+});
+
+/* ============================================================
+   6. 渲染循环
+   ============================================================ */
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const time = clock.getElapsedTime();
+  if (mixer) mixer.update(0.015);
+  if (currentModel) currentModel.position.y += Math.sin(time * 1.5) * 0.0005;
+  
+  crossGroup.rotation.y = time * 0.2;
+
+  if (isResettingView) {
+    camera.position.lerp(defaultCameraPos, 0.08);
+    if (camera.position.distanceTo(defaultCameraPos) < 0.05) {
+      camera.position.copy(defaultCameraPos);
+      isResettingView = false;
+    }
+  }
+
+  controls.update();
+  composer.render();
+
+  if (currentModel && finishTriggered) {
+    const screenPos = hotspotAnchor.clone();
+    screenPos.y += currentModel.position.y;
+    screenPos.project(camera);
+
+    if (screenPos.z < 1) {
+      const x = (screenPos.x * 0.5 + 0.5) * container.clientWidth;
+      const y = (-screenPos.y * 0.5 + 0.5) * container.clientHeight;
+      
+      hotspotEl.style.left = `${x}px`;
+      hotspotEl.style.top = `${y}px`;
+      hotspotEl.style.opacity = hotspotEl.classList.contains('visible') ? '1' : '0';
+    } else {
+      hotspotEl.style.opacity = '0';
+    }
+  }
+}
+
+animate();
+
+/* ============================================================
+   7. 屏幕自适应
+   ============================================================ */
+function onResize() {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  if (!w || !h) return;
+  
+  renderer.setSize(w, h, false);
+  composer.setSize(w, h); 
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+
+  const aspect = w / h;
+  if (aspect < 0.8) { 
+    crossGroup.scale.set(0.6, 0.6, 0.6);
+    crossGroup.position.set(0, 1.6, -5);
+  } else {
+    crossGroup.scale.set(1.2, 1.2, 1.2);
+    crossGroup.position.set(0, 1.5, -4);
+  }
+}
+
+const ro = new ResizeObserver(onResize);
+ro.observe(container);
+requestAnimationFrame(onResize);
+</script>
+</body>
+</html>
